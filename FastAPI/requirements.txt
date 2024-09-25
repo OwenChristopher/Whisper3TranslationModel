@@ -1,0 +1,16 @@
+torch
+whisper
+pydub
+noisereduce
+soundfile
+speechbrain
+transformers
+pyttsx3
+langchain
+langchain_google_genai
+sounddevice
+langdetect
+fastapi
+uvicorn
+pydantic
+sqlalchemy
