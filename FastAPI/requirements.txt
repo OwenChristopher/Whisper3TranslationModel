@@ -1,5 +1,5 @@
 torch
-whisper
+openai-whisper
 pydub
 noisereduce
 soundfile
@@ -14,3 +14,4 @@ fastapi
 uvicorn
 pydantic
 sqlalchemy
+python-multipart
