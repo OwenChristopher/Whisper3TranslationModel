@@ -4,6 +4,7 @@ import ObjectiveForm from './components/ObjectiveForm';
 import AudioRecorder from './components/AudioRecorder';
 import ConversationHistory from './components/ConversationHistory';
 import Summary from './components/Summary';
+import { Container, Box, Typography } from '@mui/material';
 
 const App = () => {
   const [sessionId, setSessionId] = useState(null);
@@ -12,6 +13,7 @@ const App = () => {
 
   const handleObjectiveSet = (id) => {
     setSessionId(id);
+    setHistory([]); // Reset history on new session
   };
 
   const handleResponse = (response) => {
@@ -21,25 +23,23 @@ const App = () => {
     };
     setHistory((prev) => [...prev, newInteraction]);
     setIsFulfilled(response.fulfilled);
-
-    if (response.fulfilled && response.summary) {
-      // Optionally, you can handle the summary here
-    }
   };
 
   return (
-    <div className="App">
-      <h1>Translation App</h1>
-      {!sessionId ? (
-        <ObjectiveForm onObjectiveSet={handleObjectiveSet} />
-      ) : (
-        <>
-          <AudioRecorder sessionId={sessionId} onResponse={handleResponse} />
-          <ConversationHistory history={history} />
-          {isFulfilled && <Summary sessionId={sessionId} />}
-        </>
-      )}
-    </div>
+    <Container maxWidth="sm">
+      <Typography variant="h4" align="center" sx={{ mb: 4 }}>Translation App</Typography>
+      <Box>
+        {!sessionId ? (
+          <ObjectiveForm onObjectiveSet={handleObjectiveSet} />
+        ) : (
+          <>
+            <AudioRecorder sessionId={sessionId} onResponse={handleResponse} />
+            <ConversationHistory history={history} />
+            {isFulfilled && <Summary sessionId={sessionId} />}
+          </>
+        )}
+      </Box>
+    </Container>
   );
 };
 

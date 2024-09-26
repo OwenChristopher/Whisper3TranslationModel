@@ -1,6 +1,14 @@
-// src/components/ObjectiveForm.js
 import React, { useState } from 'react';
-import { setObjective } from '../api';
+import { Button, TextField, Select, MenuItem, Typography, Box } from '@mui/material';
+import { setObjective } from '../api'; 
+
+
+const languages = [
+  { code: 'en', name: 'English' },
+  { code: 'es', name: 'Spanish' },
+  { code: 'fr', name: 'French' },
+  // Add more languages as needed
+];
 
 const ObjectiveForm = ({ onObjectiveSet }) => {
   const [objective, setObjectiveText] = useState('');
@@ -18,31 +26,35 @@ const ObjectiveForm = ({ onObjectiveSet }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Set Your Objective</h2>
-      <div>
-        <label>Objective:</label>
-        <input
-          type="text"
+    <Box sx={{ p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
+      <Typography variant="h5">Set Your Objective</Typography>
+      <form onSubmit={handleSubmit}>
+        <TextField
+          label="Objective"
+          variant="outlined"
+          fullWidth
           value={objective}
           onChange={(e) => setObjectiveText(e.target.value)}
           required
+          sx={{ mb: 2 }}
         />
-      </div>
-      <div>
-        <label>Target Language:</label>
-        <select
+        <Select
           value={targetLanguage}
           onChange={(e) => setTargetLanguage(e.target.value)}
+          fullWidth
+          sx={{ mb: 2 }}
         >
-          <option value="en">English</option>
-          <option value="es">Spanish</option>
-          <option value="fr">French</option>
-          {/* Add more languages as needed */}
-        </select>
-      </div>
-      <button type="submit">Start Session</button>
-    </form>
+          {languages.map((language) => (
+            <MenuItem key={language.code} value={language.code}>
+              {language.name}
+            </MenuItem>
+          ))}
+        </Select>
+        <Button type="submit" variant="contained" color="primary" fullWidth>
+          Start Session
+        </Button>
+      </form>
+    </Box>
   );
 };
 

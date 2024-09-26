@@ -1,22 +1,22 @@
-// src/components/ConversationHistory.js
 import React from 'react';
+import { Box, Typography } from '@mui/material';
 
 const ConversationHistory = ({ history }) => {
   return (
-    <div>
-      <h2>Conversation History</h2>
+    <Box sx={{ p: 2, border: '1px solid #ccc', borderRadius: 2, mb: 2 }}>
+      <Typography variant="h5">Conversation History</Typography>
       {history.length === 0 ? (
-        <p>No interactions yet.</p>
+        <Typography>No interactions yet.</Typography>
       ) : (
         history.map((item, index) => (
-          <div key={index}>
-            <p><strong>User:</strong> {item.user_text}</p>
-            <p><strong>Assistant:</strong> {item.assistant_response}</p>
+          <Box key={index} sx={{ mb: 1 }}>
+            <Typography><strong>User:</strong> {item.user_text}</Typography>
+            <Typography><strong>Assistant:</strong> {item.assistant_response}</Typography>
             <hr />
-          </div>
+          </Box>
         ))
       )}
-    </div>
+    </Box>
   );
 };
 

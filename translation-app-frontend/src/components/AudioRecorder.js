@@ -1,9 +1,12 @@
-// src/components/AudioRecorder.js
 import React, { useState, useRef } from 'react';
-import { processAudio } from '../api';
+import { Button, Typography, Box, CircularProgress } from '@mui/material';
+import { Mic, Stop } from '@mui/icons-material';
+import { processAudio } from '../api'; 
+
 
 const AudioRecorder = ({ sessionId, onResponse }) => {
   const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
@@ -20,6 +23,7 @@ const AudioRecorder = ({ sessionId, onResponse }) => {
         };
 
         mediaRecorderRef.current.onstop = async () => {
+          setIsProcessing(true);
           const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
           audioChunksRef.current = [];
           const audioFile = new File([audioBlob], 'recording.wav', { type: 'audio/wav' });
@@ -30,6 +34,8 @@ const AudioRecorder = ({ sessionId, onResponse }) => {
           } catch (error) {
             console.error('Error processing audio:', error);
             alert('Failed to process audio.');
+          } finally {
+            setIsProcessing(false);
           }
         };
       } catch (error) {
@@ -47,14 +53,22 @@ const AudioRecorder = ({ sessionId, onResponse }) => {
   };
 
   return (
-    <div>
-      <h2>Record Your Audio</h2>
-      {!isRecording ? (
-        <button onClick={startRecording}>Start Recording</button>
+    <Box sx={{ p: 2, border: '1px solid #ccc', borderRadius: 2, mb: 2, textAlign: 'center' }}>
+      <Typography variant="h5">Record Your Audio</Typography>
+      {!isProcessing ? (
+        <Button
+          variant="contained"
+          color={isRecording ? "secondary" : "primary"}
+          onClick={isRecording ? stopRecording : startRecording}
+          startIcon={isRecording ? <Stop /> : <Mic />}
+          sx={{ mt: 2 }}
+        >
+          {isRecording ? 'Stop Recording' : 'Start Recording'}
+        </Button>
       ) : (
-        <button onClick={stopRecording}>Stop Recording</button>
+        <CircularProgress />
       )}
-    </div>
+    </Box>
   );
 };
 
