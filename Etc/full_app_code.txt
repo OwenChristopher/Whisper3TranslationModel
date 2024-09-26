@@ -1,0 +1,373 @@
+# Combined Python file from various modules
+
+# app/utils.py
+# Comment: Utility functions for language handling and model initialization
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+LANGUAGE_CODE_MAP = {
+    'english': 'en',
+    'spanish': 'es',
+    'french': 'fr',
+    'chinese': 'cn',
+    'indonesian': 'in',
+    'russian':'rs'
+}
+
+def get_user_settings():
+    print("Welcome to the Translation App!")
+    objective = input("Please enter your objective (e.g., Schedule a meeting): ").strip()
+    target_language_input = input("Please enter the target language (e.g., English, Spanish): ").strip().lower()
+    target_language = LANGUAGE_CODE_MAP.get(target_language_input, 'en')  # Default to English
+    return objective, target_language
+
+def initialize_language_model():
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    import os
+    model = ChatGoogleGenerativeAI(
+        model="gemini-1.5-flash",
+        google_api_key=os.getenv("GEMINI_API_KEY"),
+        temperature=0.5
+    )
+    return model
+
+# app/transcription_handler.py
+# Comment: Handles transcription using the Whisper model
+
+import torch
+import whisper
+
+class TranscriptionHandler:
+    def __init__(self, model_name='large', device=None):
+        self.device = device if device else ("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Using device: {self.device}")
+        print("Loading Whisper model...")
+        self.model = whisper.load_model(model_name).to(self.device)
+        print("Whisper model loaded.")
+
+    def transcribe(self, audio_path):
+        print("Transcribing with Whisper...")
+        result = self.model.transcribe(audio_path)
+        return result['text']
+
+# app/summary_generator.py
+# Comment: Generates a summary from conversation history
+
+from langchain import LLMChain
+from langchain.prompts import PromptTemplate
+
+class SummaryGenerator:
+    def __init__(self, llm):
+        self.llm = llm
+
+    def generate_summary(self, history):
+        summary_text = "Conversation History:\n" + "\n".join(
+            [f"User: {item['user']}\nAssistant: {item['assistant']}" for item in history]
+        )
+        prompt_template = PromptTemplate(
+            input_variables=["history"],
+            template="""
+You are an assistant that summarizes conversations.
+
+{history}
+
+Generate a concise summary of the conversation, focusing on the objectives achieved and any unresolved issues.
+
+Summary:
+"""
+        )
+        chain = LLMChain(llm=self.llm, prompt=prompt_template)
+        summary = chain.run(history=summary_text)
+        return summary.strip()
+
+# app/schemas.py
+# Comment: Defines data schemas for request handling
+
+from pydantic import BaseModel
+
+class ObjectiveRequest(BaseModel):
+    objective: str
+    target_language: str
+
+# app/models.py
+# Comment: Manages session states and interaction history
+
+class SessionState:
+    def __init__(self, objective, target_language):
+        self.objective = objective
+        self.target_language = target_language
+        self.history = []  # List of dictionaries: {'user': ..., 'assistant': ...}
+        self.current_status = 'ongoing'  # Can be 'ongoing', 'fulfilled', 'failed'
+
+    def add_interaction(self, user_text, assistant_response):
+        self.history.append({"user": user_text, "assistant": assistant_response})
+
+    def update_status(self, status):
+        self.current_status = status
+
+    def get_summary(self):
+        return "\n".join([f"User: {item['user']}\nAssistant: {item['assistant']}" for item in self.history])
+
+# app/main.py
+# Comment: Main FastAPI application
+
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+import os
+import tempfile
+import uvicorn
+from uuid import uuid4
+
+from .models import SessionState
+from .audio_handler import AudioHandler
+from .transcription_handler import TranscriptionHandler
+from .conversation_manager import ConversationManager
+from .summary_generator import SummaryGenerator
+from .utils import initialize_language_model
+from .schemas import ObjectiveRequest
+
+app = FastAPI()
+
+# Allow CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Initialize the language model once at startup
+@app.on_event("startup")
+def startup_event():
+    global llm
+    llm = initialize_language_model()
+
+# In-memory session storage (use a database in production)
+sessions = {}
+
+@app.post("/set_objective")
+def set_objective(request: ObjectiveRequest):
+    session_id = str(uuid4())
+    session = SessionState(objective=request.objective, target_language=request.target_language)
+    sessions[session_id] = session
+    return {"session_id": session_id, "message": "Objective and target language set successfully."}
+
+@app.post("/process_audio/{session_id}")
+async def process_audio(session_id: str, file: UploadFile = File(...)):
+    session = sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=400, detail="Invalid session ID.")
+
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmpfile:
+            tmpfile.write(await file.read())
+            input_audio_path = tmpfile.name
+
+        audio_handler = AudioHandler(duration=5, sample_rate=16000)
+        denoised_audio = audio_handler.preprocess_audio(input_audio_path)
+
+        transcription_handler = TranscriptionHandler()
+        user_text = transcription_handler.transcribe(denoised_audio)
+
+        conversation_manager = ConversationManager(llm=llm, session=session)
+        assistant_response, fulfilled = conversation_manager.manage_conversation(user_text)
+
+        os.remove(input_audio_path)
+        os.remove(denoised_audio)
+
+        response = {
+            "user_text": user_text,
+            "assistant_response": assistant_response,
+            "fulfilled": fulfilled
+        }
+
+        if fulfilled:
+            summary_generator = SummaryGenerator(llm=llm)
+            summary = summary_generator.generate_summary(session.history)
+            response["summary"] = summary
+
+        return response
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing audio: {e}")
+
+@app.get("/summary/{session_id}")
+def get_summary(session_id: str):
+    session = sessions.get(session_id)
+    if not session or not session.history:
+        raise HTTPException(status_code=400, detail="No conversation history available.")
+    
+    summary_generator = SummaryGenerator(llm=llm)
+    summary = summary_generator.generate_summary(session.history)
+    return {"summary": summary}
+
+if __name__ == "__main__":
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+
+# app/language_processor.py
+# Comment: Handles language detection and translation using LangChain and LangDetect
+
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langdetect import detect, DetectorFactory, LangDetectException
+
+DetectorFactory.seed = 0
+
+class LanguageProcessor:
+    def __init__(self, llm):
+        self.llm = llm
+
+    def detect_language(self, text):
+        try:
+            language = detect(text)
+            print(f"Detected language: {language}")
+            return language
+        except LangDetectException:
+            print("Could not detect language.")
+            return None
+
+    def translate_text(self, text, source_lang, target_lang):
+        prompt_template = PromptTemplate(
+            input_variables=["text", "source_lang", "target_lang"],
+            template="""
+You are a proficient translator.
+
+Source Language: {source_lang}
+Target Language: {target_lang}
+
+Please translate the following text from {source_lang} to {target_lang}:
+
+"{text}"
+
+Translation:
+"""
+        )
+        chain = LLMChain(llm=self.llm, prompt=prompt_template)
+        translation = chain.run(text=text, source_lang=source_lang, target_lang=target_lang)
+        return translation.strip()
+
+# app/intent_recognizer.py
+# Comment: Recognizes user intent based on input text
+
+from langchain import LLMChain
+from langchain.prompts import PromptTemplate
+
+class IntentRecognizer:
+    def __init__(self, llm):
+        self.llm = llm
+
+    def recognize_intent(self, text):
+        prompt_template = PromptTemplate(
+            input_variables=["text"],
+            template="""
+You are an assistant that extracts the user's intent from their input.
+
+User Input: "{text}"
+
+Determine the user's intent and extract relevant information.
+
+Intent and Information:
+"""
+        )
+        chain = LLMChain(llm=self.llm, prompt=prompt_template)
+        response = chain.run(text=text)
+        return response.strip()
+
+# app/conversation_manager.py
+# Comment: Manages the conversation flow and checks if objectives are fulfilled
+
+from langchain import LLMChain
+from langchain.prompts import PromptTemplate
+from .intent_recognizer import IntentRecognizer
+from .language_processor import LanguageProcessor
+
+class ConversationManager:
+    def __init__(self, llm, session):
+        self.llm = llm
+        self.session = session
+        self.intent_recognizer = IntentRecognizer(llm)
+        self.language_processor = LanguageProcessor(llm)
+
+    def evaluate_objective(self, user_text, assistant_response):
+        if any(keyword in assistant_response.lower() for keyword in ["completed", "achieved", "done"]):
+            self.session.update_status('fulfilled')
+            return True
+        return False
+
+    def generate_response(self, translated_text):
+        prompt_template = PromptTemplate(
+            input_variables=["translated_text", "objective"],
+            template="""
+You are an assistant tasked with helping the user achieve their objective.
+
+Objective: {objective}
+
+User Input: "{translated_text}"
+
+Generate a response that moves towards achieving the user's objective.
+"""
+        )
+        chain = LLMChain(llm=self.llm, prompt=prompt_template)
+        response = chain.run(translated_text=translated_text, objective=self.session.objective)
+        return response.strip()
+
+    def manage_conversation(self, user_text):
+        source_lang = self.language_processor.detect_language(user_text)
+        if not source_lang:
+            return "Sorry, I couldn't detect the language of your input.", False
+
+        translated_text = self.language_processor.translate_text(user_text, source_lang, self.session.target_language)
+        intent_info = self.intent_recognizer.recognize_intent(translated_text)
+        assistant_response = self.generate_response(translated_text)
+        final_response = self.language_processor.translate_text(assistant_response, self.session.target_language, source_lang)
+
+        self.session.add_interaction(user_text, final_response)
+
+        if self.evaluate_objective(user_text, assistant_response):
+            return final_response, True
+        else:
+            return final_response, False
+
+# app/audio_handler.py
+# Comment: Handles audio recording and preprocessing (normalization and noise reduction)
+
+import os
+import soundfile as sf
+from pydub import AudioSegment, effects
+import noisereduce as nr
+import sounddevice as sd
+import tempfile
+
+class AudioHandler:
+    def __init__(self, sample_rate=16000, duration=5):
+        self.sample_rate = sample_rate
+        self.duration = duration
+
+    def record_audio(self):
+        print("Recording...")
+        try:
+            recording = sd.rec(int(self.duration * self.sample_rate), samplerate=self.sample_rate, channels=1, dtype='float32')
+            sd.wait()  # Wait until recording is finished
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmpfile:
+                sf.write(tmpfile.name, recording, self.sample_rate)
+                return tmpfile.name
+        except Exception as e:
+            return None
+
+    def preprocess_audio(self, input_path):
+        normalized_path = "normalized_audio.wav"
+        denoised_path = "denoised_audio.wav"
+        
+        audio = AudioSegment.from_file(input_path)
+        normalized_audio = effects.normalize(audio, headroom=-20.0)
+        normalized_audio.export(normalized_path, format="wav")
+
+        data, rate = sf.read(normalized_path)
+        reduced_noise = nr.reduce_noise(y=data, sr=rate)
+        sf.write(denoised_path, reduced_noise, rate)
+
+        return denoised_path
