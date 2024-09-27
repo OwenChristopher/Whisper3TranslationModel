@@ -138,7 +138,7 @@ class LLMChat:
         try:
             # Prepare history in the format expected by OpenAI's API
             api_messages = self.prepare_history_for_api()
-            print(f'API history: {api_messages}')
+            print(f'Api history is {api_messages}')
 
             response = self.client.chat.completions.create(
                 model=self.model_name,
@@ -150,8 +150,8 @@ class LLMChat:
             print(f'Assistant reply: {assistant_reply}')
 
             message_type, recipient, message = self.extract_message_components(assistant_reply)
-            print(f'Message Type: {message_type}, Recipient: {recipient}, Message: {message}')
-
+            print(f'Message is {message}, recipient is {recipient}, message type is {message_type}')
+            
             if message_type and recipient and message:
                 if message_type in ['CAUTION', 'SUMMARY']:
                     self.history.append({
@@ -165,7 +165,28 @@ class LLMChat:
                         "recipient": recipient,
                         "content": message
                     })
-                # Note: In API mode, we do not wait for user input; instead, the front end handles it.
+                
+                # Additional handling based on message_type
+                if message_type == 'TARGET':
+                    # Message intended for target; no immediate action needed
+                    pass
+                elif message_type in ['USER', 'SUMMARY']:
+                    # Message intended for user; prompt for input
+                    user_input = self.get_user_input(message)
+                    if user_input is None:  # User chose to quit
+                        return
+                    self.history.append({
+                        "type": "user",
+                        "recipient": "assistant",
+                        "content": user_input
+                    })
+                    self.call_model()
+                elif message_type == 'CAUTION':
+                    # Caution messages may not require immediate user input
+                    pass
+                else:
+                    # Handle other message types if necessary
+                    pass
             else:
                 # Invalid format; respond with system error
                 caution_message = "System error: Invalid response format."
@@ -184,6 +205,7 @@ class LLMChat:
                 "recipient": "User",
                 "content": caution_message
             })
+
 
     def extract_message_components(self, assistant_reply):
         """
@@ -232,10 +254,30 @@ class LLMChat:
                 return msg['content']
         return "No response from assistant."
 
+    def get_history_uppercase(self):
+        """
+        Returns a copy of the conversation history with all dictionary values converted to uppercase,
+        except for the values associated with the 'content' key.
+
+        Returns:
+            list: A new list containing dictionaries with uppercase string values, excluding 'content'.
+        """
+        return [
+            {
+                key: (value if key == 'content' else value.upper()) if isinstance(value, str) else value
+                for key, value in entry.items()
+            }
+            for entry in self.history
+        ]
+
+
     def get_history_json(self):
         """
         Returns the conversation history in JSON format.
 
         :return: JSON string of the conversation history.
         """
-        return json.dumps(self.history, ensure_ascii=False, indent=2)
+
+
+
+        return json.dumps(self.get_history_uppercase(), ensure_ascii=False, indent=2)
