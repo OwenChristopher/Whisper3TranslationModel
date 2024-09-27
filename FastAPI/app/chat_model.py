@@ -256,15 +256,20 @@ class LLMChat:
 
     def get_history_uppercase(self):
         """
-        Returns a copy of the conversation history with all dictionary values converted to uppercase.
+        Returns a copy of the conversation history with all dictionary values converted to uppercase,
+        except for the values associated with the 'content' key.
 
         Returns:
-            list: A new list containing dictionaries with uppercase string values.
+            list: A new list containing dictionaries with uppercase string values, excluding 'content'.
         """
         return [
-            {key: (value.upper() if isinstance(value, str) else value) for key, value in entry.items()}
+            {
+                key: (value if key == 'content' else value.upper()) if isinstance(value, str) else value
+                for key, value in entry.items()
+            }
             for entry in self.history
         ]
+
 
     def get_history_json(self):
         """
