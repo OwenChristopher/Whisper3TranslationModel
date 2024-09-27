@@ -1,45 +1,48 @@
 // src/App.js
-import React, { useState } from 'react';
-import ObjectiveForm from './components/ObjectiveForm';
-import AudioRecorder from './components/AudioRecorder';
-import ConversationHistory from './components/ConversationHistory';
-import Summary from './components/Summary';
-import { Container, Box, Typography } from '@mui/material';
+
+import React, { useContext } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import NavigationBar from './components/NavigationBar';
+import HomePage from './pages/HomePage';
+import TranslationPage from './pages/TranslationPage';
+import HistoryPage from './pages/HistoryPage';
+import { Container } from '@mui/material';
+import { SessionProvider, SessionContext } from './contexts/SessionContext';
+
+const ProtectedRoute = ({ children }) => {
+  const { sessionId } = useContext(SessionContext);
+  return sessionId ? children : <Navigate to="/" />;
+};
 
 const App = () => {
-  const [sessionId, setSessionId] = useState(null);
-  const [history, setHistory] = useState([]);
-  const [isFulfilled, setIsFulfilled] = useState(false);
-
-  const handleObjectiveSet = (id) => {
-    setSessionId(id);
-    setHistory([]); // Reset history on new session
-  };
-
-  const handleResponse = (response) => {
-    const newInteraction = {
-      user_text: response.user_text,
-      assistant_response: response.assistant_response,
-    };
-    setHistory((prev) => [...prev, newInteraction]);
-    setIsFulfilled(response.fulfilled);
-  };
-
   return (
-    <Container maxWidth="sm">
-      <Typography variant="h4" align="center" sx={{ mb: 4 }}>Translation App</Typography>
-      <Box>
-        {!sessionId ? (
-          <ObjectiveForm onObjectiveSet={handleObjectiveSet} />
-        ) : (
-          <>
-            <AudioRecorder sessionId={sessionId} onResponse={handleResponse} />
-            <ConversationHistory history={history} />
-            {isFulfilled && <Summary sessionId={sessionId} />}
-          </>
-        )}
-      </Box>
-    </Container>
+    <SessionProvider>
+    <Router>
+        <NavigationBar />
+        <Container sx={{ mt: 4 }}>
+      <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route
+              path="/translate"
+              element={
+                <ProtectedRoute>
+                  <TranslationPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/history"
+              element={
+                <ProtectedRoute>
+                  <HistoryPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Add more routes as needed */}
+      </Routes>
+        </Container>
+    </Router>
+    </SessionProvider>
   );
 };
 

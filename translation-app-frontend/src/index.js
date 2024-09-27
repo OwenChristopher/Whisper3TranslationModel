@@ -1,12 +1,30 @@
-// src/index.js
 import React from 'react';
 import ReactDOM from 'react-dom';
 import App from './App';
-import './styles.css';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+
+// Create a custom theme
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#1976d2', // Customize primary color
+    },
+    secondary: {
+      main: '#dc004e', // Customize secondary color
+    },
+  },
+  typography: {
+    fontFamily: 'Roboto, Arial, sans-serif', // Customize font
+  },
+});
 
 ReactDOM.render(
   <React.StrictMode>
-    <App />
+    <ThemeProvider theme={theme}>
+      <CssBaseline /> {/* Normalize CSS across browsers */}
+      <App />
+    </ThemeProvider>
   </React.StrictMode>,
   document.getElementById('root')
 );
