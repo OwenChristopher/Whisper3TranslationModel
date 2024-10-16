@@ -1,8 +1,9 @@
+// src/components/AudioRecorder.js
+
 import React, { useState, useRef } from 'react';
 import { Button, Typography, Box, CircularProgress } from '@mui/material';
 import { Mic, Stop } from '@mui/icons-material';
 import { processAudio } from '../api'; 
-
 
 const AudioRecorder = ({ sessionId, onResponse }) => {
   const [isRecording, setIsRecording] = useState(false);

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="history">
+    <h2>Conversation History</h2>
+    <ul id="historyList">
+        <!-- History will be loaded here -->
+    </ul>
+</div>
+
+<script>
+    const sessionId = "{{ session_id }}";
+
+    // Function to load history
+    function loadHistory(){
+        $.ajax({
+            url: `/history/${sessionId}`,
+            type: 'GET',
+            success: function(response){
+                $('#historyList').empty();
+                response.history.forEach(item => {
+                    $('#historyList').append(`
+                        <li>
+                            <strong>${item.role}:</strong> ${item.content}
+                            <button onclick="deleteMessage(${item.id})">Delete</button>
+                        </li>
+                    `);
+                });
+            },
+            error: function(xhr){
+                alert('Failed to load history.');
+            }
+        });
+    }
+
+    // Function to delete a message
+    function deleteMessage(id){
+        $.ajax({
+            url: `/history/${sessionId}`,
+            type: 'DELETE',
+            contentType: 'application/json',
+            data: JSON.stringify({ id: id }),
+            success: function(response){
+                alert(response.message);
+                loadHistory();
+            },
+            error: function(xhr){
+                alert('Failed to delete message.');
+            }
+        });
+    }
+
+    // Initial load
+    $(document).ready(function(){
+        loadHistory();
+    });
+</script>
+{% endblock %}

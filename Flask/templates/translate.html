@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="translate">
+    <h2>Translation</h2>
+
+    <!-- Audio Recorder -->
+    <div id="audioRecorder">
+        <button id="recordButton">Start Recording</button>
+        <button id="stopButton" disabled>Stop Recording</button>
+        <p id="status"></p>
+    </div>
+
+    <!-- Conversation History -->
+    <div id="conversationHistory">
+        <h3>Conversation Logs</h3>
+        <ul id="historyList">
+            <!-- Messages will be appended here -->
+        </ul>
+    </div>
+
+    <!-- Manual Text Input -->
+    <div id="textInput">
+        <h3>Enter Text</h3>
+        <form id="textForm">
+            <textarea id="manualText" rows="4" cols="50" required></textarea><br><br>
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+
+    <!-- Text-to-Speech -->
+    <audio id="ttsAudio" controls></audio>
+</div>
+
+<script>
+    const sessionId = "{{ session_id }}";
+
+    // Handle Audio Recording
+    let mediaRecorder;
+    let audioChunks = [];
+
+    $('#recordButton').click(function(){
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.start();
+                $('#status').text('Recording...');
+                $('#recordButton').prop('disabled', true);
+                $('#stopButton').prop('disabled', false);
+
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const formData = new FormData();
+                    formData.append('file', audioBlob, 'recording.wav');
+
+                    $('#status').text('Processing audio...');
+                    $.ajax({
+                        url: `/process_audio/${sessionId}`,
+                        type: 'POST',
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function(response){
+                            $('#status').text('Audio processed.');
+                            appendMessage('User', response.user_text);
+                            appendMessage('Assistant', response.assistant_response);
+                            // Handle Text-to-Speech
+                            textToSpeech(response.assistant_response);
+                        },
+                        error: function(xhr){
+                            alert('Failed to process audio.');
+                            $('#status').text('');
+                        }
+                    });
+
+                    audioChunks = [];
+                };
+            })
+            .catch(err => {
+                alert('Microphone access denied.');
+            });
+    });
+
+    $('#stopButton').click(function(){
+        mediaRecorder.stop();
+        $('#recordButton').prop('disabled', false);
+        $('#stopButton').prop('disabled', true);
+    });
+
+    // Handle Manual Text Submission
+    $('#textForm').on('submit', function(e){
+        e.preventDefault();
+        const manualText = $('#manualText').val();
+
+        $.ajax({
+            url: `/send_message/${sessionId}`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ message: manualText }),
+            success: function(response){
+                appendMessage('User', manualText);
+                appendMessage('Assistant', response.assistant_response);
+                textToSpeech(response.assistant_response);
+                $('#manualText').val('');
+            },
+            error: function(xhr){
+                alert('Failed to send message.');
+            }
+        });
+    });
+
+    // Function to append messages to history
+    function appendMessage(sender, message){
+        $('#historyList').append(`<li><strong>${sender}:</strong> ${message}</li>`);
+    }
+
+    // Function for Text-to-Speech
+    function textToSpeech(text){
+        // Utilize the browser's SpeechSynthesis API
+        const utterance = new SpeechSynthesisUtterance(text);
+        // Optionally set language based on target_language
+        utterance.lang = 'zh-CN'; // Example: Chinese
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // Initial Load: Fetch conversation history
+    $(document).ready(function(){
+        $.ajax({
+            url: `/history/${sessionId}`,
+            type: 'GET',
+            success: function(response){
+                response.history.forEach(item => {
+                    const sender = item.role === 'user' ? 'You' : 'Assistant';
+                    appendMessage(sender, item.content);
+                });
+            },
+            error: function(xhr){
+                console.error('Failed to fetch history.');
+            }
+        });
+    });
+</script>
+{% endblock %}

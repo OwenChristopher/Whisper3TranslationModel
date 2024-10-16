@@ -1,7 +1,7 @@
 // src/components/NavigationBar.js
 
 import React, { useContext } from 'react';
-import { AppBar, Toolbar, Typography, Button } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, IconButton } from '@mui/material';
 import TranslateIcon from '@mui/icons-material/Translate';
 import HistoryIcon from '@mui/icons-material/History';
 import HomeIcon from '@mui/icons-material/Home';
@@ -29,6 +29,14 @@ const NavigationBar = () => {
           startIcon={<HomeIcon />}
           component={RouterLink}
           to="/"
+          sx={{
+            borderRadius: '50px',
+            transition: 'background-color 0.3s, transform 0.3s',
+            '&:hover': {
+              backgroundColor: 'primary.dark',
+              transform: 'scale(1.05)',
+            },
+          }}
         >
           Home
         </Button>
@@ -39,6 +47,15 @@ const NavigationBar = () => {
               startIcon={<TranslateIcon />}
               component={RouterLink}
               to="/translate"
+              sx={{
+                borderRadius: '50px',
+                transition: 'background-color 0.3s, transform 0.3s',
+                '&:hover': {
+                  backgroundColor: 'primary.dark',
+                  transform: 'scale(1.05)',
+                },
+                ml: 2,
+              }}
             >
               Translate
             </Button>
@@ -47,13 +64,30 @@ const NavigationBar = () => {
               startIcon={<HistoryIcon />}
               component={RouterLink}
               to="/history"
+              sx={{
+                borderRadius: '50px',
+                transition: 'background-color 0.3s, transform 0.3s',
+                '&:hover': {
+                  backgroundColor: 'primary.dark',
+                  transform: 'scale(1.05)',
+                },
+                ml: 2,
+              }}
             >
               History
             </Button>
             <Button
               color="inherit"
               onClick={handleResetSession}
-              sx={{ ml: 2 }}
+              sx={{ 
+                ml: 2,
+                borderRadius: '50px',
+                transition: 'background-color 0.3s, transform 0.3s',
+                '&:hover': {
+                  backgroundColor: 'secondary.dark',
+                  transform: 'scale(1.05)',
+                },
+              }}
             >
               Reset Session
             </Button>

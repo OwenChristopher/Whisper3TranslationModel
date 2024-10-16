@@ -17,9 +17,27 @@ const HomePage = () => {
   };
 
   return (
-    <Box textAlign="center">
+    <Box 
+      textAlign="center"
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: '16px', // Changed from '50%' to '16px' for rounded corners
+        backgroundColor: '#e0f7fa',
+        padding: 4,
+        boxShadow: 3,
+        transition: 'transform 0.3s',
+        '&:hover': {
+          transform: 'scale(1.05)',
+        },
+        maxWidth: '800px', // Optional: Set a max width for better layout
+        margin: '0 auto', // Center the box horizontally
+      }}
+    >
       <Typography variant="h3" gutterBottom>
-        Welcome to the Translation App
+        Welcome to XMTranslator!
       </Typography>
       <Typography variant="h6" gutterBottom>
         Seamlessly translate text and speech between multiple languages using our AI-powered tool.

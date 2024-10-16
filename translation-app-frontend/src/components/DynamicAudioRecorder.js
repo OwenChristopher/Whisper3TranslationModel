@@ -9,8 +9,8 @@ import { SessionContext } from '../contexts/SessionContext';
 import PopupDialog from './PopupDialog';
 
 const PulsatingCircle = styled('div')(({ theme, isRecording }) => ({
-  width: isRecording ? 120 : 100, // Increased size for better visibility
-  height: isRecording ? 120 : 100,
+  width: isRecording ? 150 : 120, // Increased size for better visibility
+  height: isRecording ? 150 : 120,
   borderRadius: '50%',
   backgroundColor: isRecording ? theme.palette.error.main : theme.palette.primary.main,
   display: 'flex',
@@ -20,8 +20,8 @@ const PulsatingCircle = styled('div')(({ theme, isRecording }) => ({
   transition: 'all 0.3s ease-in-out',
   animation: isRecording ? 'pulse 1s infinite' : 'none',
   boxShadow: isRecording
-    ? `0 0 0 15px rgba(255, 0, 0, 0.2)`
-    : `0 0 0 10px rgba(25, 118, 210, 0.2)`,
+    ? `0 0 0 20px rgba(255, 0, 0, 0.2)`
+    : `0 0 0 15px rgba(25, 118, 210, 0.2)`,
 
   '@keyframes pulse': {
     '0%': {
@@ -29,13 +29,19 @@ const PulsatingCircle = styled('div')(({ theme, isRecording }) => ({
       opacity: 1,
     },
     '50%': {
-      transform: 'scale(1.1)',
+      transform: 'scale(1.2)',
       opacity: 0.7,
     },
     '100%': {
       transform: 'scale(1)',
       opacity: 1,
     },
+  },
+
+  // Responsive adjustments
+  [theme.breakpoints.down('sm')]: {
+    width: isRecording ? 100 : 80,
+    height: isRecording ? 100 : 80,
   },
 }));
 

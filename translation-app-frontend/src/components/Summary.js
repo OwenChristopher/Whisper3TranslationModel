@@ -1,3 +1,5 @@
+// src/components/Summary.js
+
 import React, { useEffect, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { getSummary } from '../api';
@@ -7,7 +9,12 @@ const Summary = ({ sessionId }) => {
 
   useEffect(() => {
     const fetchSummary = async () => {
-      // Existing fetch logic
+      try {
+        const data = await getSummary(sessionId);
+        setSummary(data.summary);
+      } catch (error) {
+        console.error('Error fetching summary:', error);
+      }
     };
 
     fetchSummary();

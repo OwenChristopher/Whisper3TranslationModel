@@ -1,3 +1,5 @@
+// src/index.js
+
 import React from 'react';
 import ReactDOM from 'react-dom';
 import App from './App';
@@ -13,6 +15,15 @@ const theme = createTheme({
     secondary: {
       main: '#dc004e', // Customize secondary color
     },
+    error: {
+      main: '#f44336', // Customize error color
+    },
+    success: {
+      main: '#4caf50', // Customize success color
+    },
+  },
+  shape: {
+    borderRadius: 50, // Increase global border radius for more rounded elements
   },
   typography: {
     fontFamily: 'Roboto, Arial, sans-serif', // Customize font

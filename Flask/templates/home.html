@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="home">
+    <h1>Welcome to the Translation App</h1>
+    <p>Seamlessly translate text and speech between multiple languages using our AI-powered tool.</p>
+    <form id="objectiveForm">
+        <label for="objective">Objective:</label><br>
+        <input type="text" id="objective" name="objective" required><br><br>
+
+        <label for="user_language">Your Language:</label><br>
+        <select id="user_language" name="user_language">
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="zh">Chinese</option>
+            <!-- Add more languages as needed -->
+        </select><br><br>
+
+        <label for="target_language">Target Language:</label><br>
+        <select id="target_language" name="target_language">
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="zh">Chinese</option>
+            <!-- Add more languages as needed -->
+        </select><br><br>
+
+        <label for="country">Country/Region:</label><br>
+        <select id="country" name="country">
+            <option value="US">United States</option>
+            <option value="CN">China</option>
+            <option value="ES">Spain</option>
+            <option value="FR">France</option>
+            <!-- Add more countries as needed -->
+        </select><br><br>
+
+        <button type="submit">Start Session</button>
+    </form>
+</div>
+
+<script>
+    $(document).ready(function(){
+        $('#objectiveForm').on('submit', function(e){
+            e.preventDefault();
+            const objective = $('#objective').val();
+            const user_language = $('#user_language').val();
+            const target_language = $('#target_language').val();
+            const country = $('#country').val();
+
+            $.ajax({
+                url: '/set_objective',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    objective: objective,
+                    user_language: user_language,
+                    target_language: target_language,
+                    country: country
+                }),
+                success: function(response){
+                    alert(response.message + " Redirecting to Translation Page...");
+                    window.location.href = '/translate';
+                },
+                error: function(xhr){
+                    alert('Failed to set objective.');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
