@@ -171,16 +171,17 @@ class LLMChat:
                     # Message intended for target; no immediate action needed
                     pass
                 elif message_type in ['USER', 'SUMMARY']:
+                    pass
                     # Message intended for user; prompt for input
-                    user_input = self.get_user_input(message)
-                    if user_input is None:  # User chose to quit
-                        return
-                    self.history.append({
-                        "type": "user",
-                        "recipient": "assistant",
-                        "content": user_input
-                    })
-                    self.call_model()
+                    # user_input = self.get_user_input(message)
+                    # if user_input is None:  # User chose to quit
+                    #     return
+                    # self.history.append({
+                    #     "type": "user",
+                    #     "recipient": "assistant",
+                    #     "content": user_input
+                    # })
+                    # self.call_model()
                 elif message_type == 'CAUTION':
                     # Caution messages may not require immediate user input
                     pass
